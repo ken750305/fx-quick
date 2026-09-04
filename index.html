@@ -433,7 +433,7 @@
           <div class="name">${c.name}</div>
         </span>
         <label class="amount-field">
-          <input class="amount" inputmode="decimal" autocomplete="off" data-code="${c.code}" placeholder="0" />
+          <input class="amount" inputmode="numeric" autocomplete="off" data-code="${c.code}" placeholder="0" />
         </label>
       `;
       rowsEl.appendChild(row);
@@ -453,7 +453,9 @@
   }
 
   function onEdit(code, input){
-    const raw = parseFloat(input.value.replace(/,/g, ''));
+    const digitsOnly = input.value.replace(/[^0-9]/g, '');
+    if (digitsOnly !== input.value) input.value = digitsOnly;
+    const raw = parseInt(digitsOnly, 10);
     state.anchorCode = code;
     state.anchorRaw = Number.isFinite(raw) ? raw : 0;
     recompute();
