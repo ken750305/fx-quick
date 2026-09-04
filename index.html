@@ -1,0 +1,618 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>匯率速算</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="匯率速算">
+<meta name="theme-color" content="#0F6F5C">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap">
+<style>
+  :root{
+    --bg:#EAF0EE;
+    --surface:#FFFFFF;
+    --surface-muted:#F1F5F3;
+    --border:#D7E1DD;
+    --text:#142420;
+    --text-muted:#5E6E68;
+    --accent:#0F6F5C;
+    --accent-strong:#0B4F41;
+    --accent-soft:rgba(15,111,92,0.12);
+    --danger:#B3452E;
+    --danger-soft:rgba(179,69,46,0.12);
+
+    --font-display:'Archivo','PingFang TC','Noto Sans TC',sans-serif;
+    --font-mono:'JetBrains Mono',ui-monospace,'SFMono-Regular',monospace;
+  }
+
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#0E1613;
+      --surface:#16221D;
+      --surface-muted:#1C2925;
+      --border:#2A3833;
+      --text:#E8F1ED;
+      --text-muted:#92A69F;
+      --accent:#4FD8B8;
+      --accent-strong:#7BEBD0;
+      --accent-soft:rgba(79,216,184,0.16);
+      --danger:#E0876B;
+      --danger-soft:rgba(224,135,107,0.16);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0E1613;
+    --surface:#16221D;
+    --surface-muted:#1C2925;
+    --border:#2A3833;
+    --text:#E8F1ED;
+    --text-muted:#92A69F;
+    --accent:#4FD8B8;
+    --accent-strong:#7BEBD0;
+    --accent-soft:rgba(79,216,184,0.16);
+    --danger:#E0876B;
+    --danger-soft:rgba(224,135,107,0.16);
+  }
+
+  *{ box-sizing:border-box; }
+  html, body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+  }
+  body{
+    font-family:var(--font-display);
+    display:flex;
+    justify-content:center;
+    padding:32px 16px 48px;
+    min-height:100vh;
+  }
+
+  .app{
+    width:100%;
+    max-width:420px;
+  }
+
+  .panel{
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:22px;
+    overflow:hidden;
+    box-shadow:0 1px 2px rgba(0,0,0,0.04);
+  }
+
+  .header{
+    position:relative;
+    padding:26px 24px 20px;
+    overflow:hidden;
+  }
+  .header svg.motif{
+    position:absolute;
+    inset:0;
+    width:100%;
+    height:100%;
+    opacity:0.35;
+  }
+  .header-content{ position:relative; z-index:1; }
+
+  .eyebrow{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    font-size:12.5px;
+    font-weight:600;
+    letter-spacing:0.06em;
+    color:var(--text-muted);
+  }
+  .dot{
+    width:7px; height:7px; border-radius:50%;
+    background:var(--text-muted);
+    flex:none;
+  }
+  .status-live .dot{ background:var(--accent); animation:pulse 2.4s ease-in-out infinite; }
+  .status-live .status-label{ color:var(--accent-strong); }
+  .status-hourly .dot{ background:var(--accent); }
+  .status-hourly .status-label{ color:var(--accent-strong); }
+  .status-error .dot{ background:var(--danger); }
+  .status-error .status-label{ color:var(--danger); }
+  @media (prefers-reduced-motion: reduce){ .status-live .dot{ animation:none; } }
+  @keyframes pulse{
+    0%,100%{ box-shadow:0 0 0 0 var(--accent-soft); }
+    50%{ box-shadow:0 0 0 5px transparent; }
+  }
+
+  .refresh-btn{
+    margin-left:auto;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    width:30px; height:30px;
+    border-radius:50%;
+    border:1px solid var(--border);
+    background:var(--surface);
+    color:var(--text-muted);
+    cursor:pointer;
+    transition:transform 0.5s ease, color 0.2s ease, border-color 0.2s ease;
+  }
+  .refresh-btn:hover{ color:var(--accent-strong); border-color:var(--accent); }
+  .refresh-btn:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
+  .refresh-btn.spinning svg{ animation:spin 0.9s linear infinite; }
+  @media (prefers-reduced-motion: reduce){ .refresh-btn.spinning svg{ animation:none; } }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+
+  h1{
+    margin:14px 0 2px;
+    font-size:26px;
+    font-weight:800;
+    letter-spacing:-0.01em;
+  }
+  .sub{
+    margin:0;
+    font-size:13.5px;
+    color:var(--text-muted);
+  }
+
+  .rows{
+    border-top:1px solid var(--border);
+  }
+  .row{
+    display:flex;
+    align-items:center;
+    gap:14px;
+    padding:16px 24px;
+    border-bottom:1px solid var(--border);
+  }
+  .row:last-child{ border-bottom:none; }
+
+  .flag{
+    font-size:22px;
+    line-height:1;
+    flex:none;
+    width:28px;
+    text-align:center;
+  }
+  .meta{ flex:none; width:78px; }
+  .code{
+    font-family:var(--font-mono);
+    font-size:13.5px;
+    font-weight:700;
+    letter-spacing:0.03em;
+  }
+  .name{
+    margin-top:1px;
+    font-size:12px;
+    color:var(--text-muted);
+  }
+
+  .amount-field{
+    flex:1;
+    display:flex;
+    align-items:baseline;
+    justify-content:flex-end;
+    gap:2px;
+    border-bottom:1.5px solid transparent;
+    padding-bottom:2px;
+    transition:border-color 0.15s ease;
+  }
+  .amount-field:focus-within{ border-color:var(--accent); }
+  input.amount{
+    width:100%;
+    min-width:0;
+    border:none;
+    background:transparent;
+    color:var(--text);
+    text-align:right;
+    font-family:var(--font-mono);
+    font-size:21px;
+    font-weight:600;
+    font-variant-numeric:tabular-nums;
+    padding:0;
+  }
+  input.amount:focus{ outline:none; }
+  input.amount::placeholder{ color:var(--text-muted); }
+
+  .footnote{
+    display:flex;
+    justify-content:space-between;
+    gap:12px;
+    padding:14px 24px 18px;
+    font-size:11.5px;
+    color:var(--text-muted);
+  }
+
+  .settings{
+    border-top:1px solid var(--border);
+  }
+  .settings-row{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:13px 24px;
+    cursor:pointer;
+    user-select:none;
+  }
+  .settings-row:hover{ background:var(--surface-muted); }
+  .settings-row:focus-visible{ outline:2px solid var(--accent); outline-offset:-2px; }
+  .settings-row .gear{ font-size:15px; flex:none; }
+  .settings-label{
+    font-size:13px;
+    font-weight:600;
+    color:var(--text-muted);
+  }
+  .badge-active{
+    font-size:10.5px;
+    font-weight:700;
+    letter-spacing:0.02em;
+    color:var(--accent-strong);
+    background:var(--accent-soft);
+    padding:2px 8px;
+    border-radius:99px;
+  }
+  .chev{
+    margin-left:auto;
+    color:var(--text-muted);
+    transition:transform 0.2s ease;
+  }
+  .settings-row[aria-expanded="true"] .chev{ transform:rotate(90deg); }
+
+  .settings-panel{
+    padding:2px 24px 18px;
+    background:var(--surface-muted);
+  }
+  .settings-panel p{
+    margin:0 0 10px;
+    font-size:12px;
+    line-height:1.6;
+    color:var(--text-muted);
+  }
+  .key-row{
+    display:flex;
+    gap:8px;
+    margin-bottom:10px;
+  }
+  .key-row input{
+    flex:1;
+    min-width:0;
+    border:1px solid var(--border);
+    border-radius:9px;
+    background:var(--surface);
+    color:var(--text);
+    font-family:var(--font-mono);
+    font-size:12.5px;
+    padding:9px 10px;
+  }
+  .key-row input:focus-visible{ outline:2px solid var(--accent); outline-offset:1px; }
+  .key-row button{
+    flex:none;
+    border:1px solid var(--border);
+    border-radius:9px;
+    background:var(--surface);
+    color:var(--text);
+    font-family:var(--font-display);
+    font-size:12.5px;
+    font-weight:600;
+    padding:0 14px;
+    cursor:pointer;
+  }
+  .key-row button:hover{ border-color:var(--accent); color:var(--accent-strong); }
+  .key-row button:focus-visible{ outline:2px solid var(--accent); outline-offset:1px; }
+  .key-warning{ color:var(--danger); }
+  .settings-panel a{ color:var(--accent-strong); }
+
+  .hint{
+    margin:16px 4px 0;
+    font-size:12px;
+    line-height:1.6;
+    color:var(--text-muted);
+    text-align:center;
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div class="panel">
+    <div class="header">
+      <svg class="motif" viewBox="0 0 400 90" preserveAspectRatio="none" aria-hidden="true">
+        <g fill="none" stroke="var(--accent)" stroke-width="1">
+          <path opacity="0.55" d="M-10,20 C30,-8 70,48 110,20 C150,-8 190,48 230,20 C270,-8 310,48 350,20 C380,0 400,30 410,20"/>
+          <path opacity="0.4"  d="M-10,38 C30,10 70,66 110,38 C150,10 190,66 230,38 C270,10 310,66 350,38 C380,18 400,48 410,38"/>
+          <path opacity="0.28" d="M-10,56 C30,28 70,84 110,56 C150,28 190,84 230,56 C270,28 310,84 350,56 C380,36 400,66 410,56"/>
+          <path opacity="0.18" d="M-10,74 C30,46 70,102 110,74 C150,46 190,102 230,74 C270,46 310,102 350,74 C380,54 400,84 410,74"/>
+        </g>
+      </svg>
+      <div class="header-content">
+        <div class="eyebrow" id="statusRow">
+          <span class="dot"></span>
+          <span class="status-label" id="statusLabel">正在取得匯率…</span>
+          <button class="refresh-btn" id="refreshBtn" title="重新整理匯率" aria-label="重新整理匯率">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 12a9 9 0 1 1-3-6.7"/>
+              <path d="M21 3v6h-6"/>
+            </svg>
+          </button>
+        </div>
+        <h1>匯率速算</h1>
+        <p class="sub">台幣・日圓・人民幣・美金・互相換算</p>
+      </div>
+    </div>
+
+    <div class="rows" id="rows"></div>
+
+    <div class="settings">
+      <div class="settings-row" id="settingsToggle" role="button" tabindex="0" aria-expanded="false" aria-controls="settingsPanel">
+        <span class="gear">⚙️</span>
+        <span class="settings-label">即時報價金鑰設定</span>
+        <span class="badge-active" id="badgeActive" hidden>已設定</span>
+        <span class="chev">›</span>
+      </div>
+      <div class="settings-panel" id="settingsPanel" hidden>
+        <p>貼上你自己在 Twelve Data 申請的免費金鑰，可切換成接近市場即時的報價；沒有金鑰時，改用每小時更新一次的公開匯率，一樣可以用。金鑰只存在這支手機的瀏覽器裡，不會經過任何其他伺服器。</p>
+        <div class="key-row">
+          <input type="text" id="apiKeyInput" placeholder="貼上 Twelve Data API 金鑰" autocomplete="off" spellcheck="false" />
+          <button type="button" id="saveKeyBtn">儲存</button>
+          <button type="button" id="clearKeyBtn">清除</button>
+        </div>
+        <p class="key-warning" id="keyWarning" hidden></p>
+        <p>還沒有金鑰？前往 <a href="https://twelvedata.com/pricing" target="_blank" rel="noopener">twelvedata.com</a> 免費註冊即可取得，不需信用卡。</p>
+      </div>
+    </div>
+
+    <div class="footnote">
+      <span id="sourceLabel">資料來源：尚未取得</span>
+      <span id="updatedAt">尚未更新</span>
+    </div>
+  </div>
+
+  <p class="hint">在 Safari 分享選單選「加入主畫面」，即可像 App 一樣從 iPhone 主畫面開啟。</p>
+</div>
+
+<script>
+  const CURRENCIES = [
+    { code:'TWD', name:'台幣', flag:'🇹🇼', decimals:2, fallback:31.5 },
+    { code:'JPY', name:'日圓', flag:'🇯🇵', decimals:0, fallback:149  },
+    { code:'CNY', name:'人民幣', flag:'🇨🇳', decimals:2, fallback:7.1  },
+    { code:'USD', name:'美金', flag:'🇺🇸', decimals:2, fallback:1    },
+  ];
+  const KEY_STORAGE = 'fx-quick-td-key';
+  const CACHE_KEY = 'fx-quick-rates-v1';
+  const REFRESH_MS = 10 * 60 * 1000;
+
+  const SOURCE_LABEL = {
+    realtime: '資料來源：Twelve Data・接近即時市場報價',
+    hourly: '資料來源：公開開放資料・每小時更新',
+  };
+
+  const state = {
+    rates: Object.fromEntries(CURRENCIES.map(c => [c.code, c.fallback])),
+    anchorCode: 'TWD',
+    anchorRaw: 1000,
+    lastUpdated: null,
+    apiKey: '',
+  };
+
+  const rowsEl = document.getElementById('rows');
+  const statusRow = document.getElementById('statusRow');
+  const statusLabel = document.getElementById('statusLabel');
+  const updatedAtEl = document.getElementById('updatedAt');
+  const sourceLabelEl = document.getElementById('sourceLabel');
+  const refreshBtn = document.getElementById('refreshBtn');
+  const settingsToggle = document.getElementById('settingsToggle');
+  const settingsPanel = document.getElementById('settingsPanel');
+  const badgeActive = document.getElementById('badgeActive');
+  const apiKeyInput = document.getElementById('apiKeyInput');
+  const saveKeyBtn = document.getElementById('saveKeyBtn');
+  const clearKeyBtn = document.getElementById('clearKeyBtn');
+  const keyWarning = document.getElementById('keyWarning');
+  const inputs = {};
+
+  function buildRows(){
+    for (const c of CURRENCIES) {
+      const row = document.createElement('div');
+      row.className = 'row';
+      row.innerHTML = `
+        <span class="flag">${c.flag}</span>
+        <span class="meta">
+          <span class="code">${c.code}</span>
+          <div class="name">${c.name}</div>
+        </span>
+        <label class="amount-field">
+          <input class="amount" inputmode="decimal" autocomplete="off" data-code="${c.code}" placeholder="0" />
+        </label>
+      `;
+      rowsEl.appendChild(row);
+      const input = row.querySelector('input');
+      inputs[c.code] = input;
+      input.addEventListener('input', () => onEdit(c.code, input));
+      input.addEventListener('blur', () => recompute());
+    }
+  }
+
+  function formatAmount(value, decimals){
+    if (!Number.isFinite(value)) return '';
+    return value.toLocaleString('en-US', {
+      minimumFractionDigits: decimals,
+      maximumFractionDigits: decimals,
+    });
+  }
+
+  function onEdit(code, input){
+    const raw = parseFloat(input.value.replace(/,/g, ''));
+    state.anchorCode = code;
+    state.anchorRaw = Number.isFinite(raw) ? raw : 0;
+    recompute();
+  }
+
+  function recompute(){
+    const anchorRate = state.rates[state.anchorCode];
+    const baseUSD = anchorRate ? state.anchorRaw / anchorRate : 0;
+    for (const c of CURRENCIES) {
+      const input = inputs[c.code];
+      if (document.activeElement === input) continue;
+      const value = baseUSD * state.rates[c.code];
+      input.value = formatAmount(value, c.decimals);
+    }
+  }
+
+  function setStatus(kind, timeLabel){
+    statusRow.classList.remove('status-live', 'status-hourly', 'status-error');
+    if (kind === 'loading') {
+      statusLabel.textContent = '正在取得匯率…';
+    } else if (kind === 'realtime') {
+      statusRow.classList.add('status-live');
+      statusLabel.textContent = '即時報價已同步';
+      updatedAtEl.textContent = `更新於 ${timeLabel}`;
+      sourceLabelEl.textContent = SOURCE_LABEL.realtime;
+    } else if (kind === 'hourly') {
+      statusRow.classList.add('status-hourly');
+      statusLabel.textContent = '匯率已同步（每小時更新）';
+      updatedAtEl.textContent = `更新於 ${timeLabel}`;
+      sourceLabelEl.textContent = SOURCE_LABEL.hourly;
+    } else if (kind === 'error') {
+      statusRow.classList.add('status-error');
+      statusLabel.textContent = '無法連線，顯示上次匯率';
+    }
+  }
+
+  function readCache(){
+    try {
+      const raw = localStorage.getItem(CACHE_KEY);
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      if (parsed && parsed.rates) {
+        state.rates = { ...state.rates, ...parsed.rates };
+        if (parsed.ts) {
+          state.lastUpdated = new Date(parsed.ts);
+          updatedAtEl.textContent = `更新於 ${state.lastUpdated.toLocaleTimeString('zh-TW', { hour:'2-digit', minute:'2-digit' })}（上次）`;
+        }
+      }
+    } catch (e) { /* ignore unavailable storage */ }
+  }
+
+  function writeCache(){
+    try {
+      localStorage.setItem(CACHE_KEY, JSON.stringify({ rates: state.rates, ts: state.lastUpdated.getTime() }));
+    } catch (e) { /* ignore unavailable storage */ }
+  }
+
+  async function fetchTwelveData(apikey){
+    const pairCodes = CURRENCIES.map(c => c.code).filter(code => code !== 'USD');
+    const responses = await Promise.all(pairCodes.map(code =>
+      fetch(`https://api.twelvedata.com/exchange_rate?symbol=USD/${code}&apikey=${encodeURIComponent(apikey)}`)
+        .then(r => r.json())
+    ));
+    const rates = { USD: 1 };
+    for (let i = 0; i < pairCodes.length; i++) {
+      const res = responses[i];
+      const value = parseFloat(res && res.rate);
+      if (res && res.status === 'error') throw new Error(res.message || 'Twelve Data 金鑰錯誤');
+      if (!Number.isFinite(value)) throw new Error('Twelve Data 回傳資料異常');
+      rates[pairCodes[i]] = value;
+    }
+    return rates;
+  }
+
+  async function fetchHourly(){
+    const res = await fetch('https://api.exchangerate.fun/latest?base=USD');
+    if (!res.ok) throw new Error('network');
+    const data = await res.json();
+    const rates = {};
+    for (const c of CURRENCIES) {
+      if (typeof data.rates[c.code] === 'number') rates[c.code] = data.rates[c.code];
+    }
+    if (Object.keys(rates).length !== CURRENCIES.length) throw new Error('incomplete');
+    return rates;
+  }
+
+  async function fetchRates(){
+    refreshBtn.classList.add('spinning');
+    setStatus('loading');
+    keyWarning.hidden = true;
+    try {
+      let rates, tier;
+      if (state.apiKey) {
+        try {
+          rates = await fetchTwelveData(state.apiKey);
+          tier = 'realtime';
+        } catch (err) {
+          keyWarning.textContent = `金鑰暫時無法使用（${err.message}），已改用每小時公開匯率`;
+          keyWarning.hidden = false;
+          rates = await fetchHourly();
+          tier = 'hourly';
+        }
+      } else {
+        rates = await fetchHourly();
+        tier = 'hourly';
+      }
+      state.rates = rates;
+      state.lastUpdated = new Date();
+      writeCache();
+      setStatus(tier, state.lastUpdated.toLocaleTimeString('zh-TW', { hour:'2-digit', minute:'2-digit' }));
+      recompute();
+    } catch (err) {
+      setStatus('error');
+    } finally {
+      refreshBtn.classList.remove('spinning');
+    }
+  }
+
+  function updateBadge(){
+    badgeActive.hidden = !state.apiKey;
+  }
+
+  function toggleSettings(){
+    const expanded = settingsToggle.getAttribute('aria-expanded') === 'true';
+    settingsToggle.setAttribute('aria-expanded', String(!expanded));
+    settingsPanel.hidden = expanded;
+  }
+
+  settingsToggle.addEventListener('click', toggleSettings);
+  settingsToggle.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleSettings(); }
+  });
+
+  saveKeyBtn.addEventListener('click', () => {
+    const val = apiKeyInput.value.trim();
+    state.apiKey = val;
+    try { localStorage.setItem(KEY_STORAGE, val); } catch (e) { /* ignore unavailable storage */ }
+    updateBadge();
+    fetchRates();
+  });
+
+  clearKeyBtn.addEventListener('click', () => {
+    state.apiKey = '';
+    apiKeyInput.value = '';
+    try { localStorage.removeItem(KEY_STORAGE); } catch (e) { /* ignore unavailable storage */ }
+    updateBadge();
+    keyWarning.hidden = true;
+    fetchRates();
+  });
+
+  buildRows();
+  readCache();
+  try {
+    state.apiKey = localStorage.getItem(KEY_STORAGE) || '';
+    apiKeyInput.value = state.apiKey;
+  } catch (e) { /* ignore unavailable storage */ }
+  updateBadge();
+  inputs[state.anchorCode].value = formatAmount(state.anchorRaw, 2);
+  recompute();
+  fetchRates();
+  refreshBtn.addEventListener('click', fetchRates);
+
+  setInterval(() => {
+    if (document.visibilityState === 'visible') fetchRates();
+  }, REFRESH_MS);
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'visible') return;
+    const staleMs = state.lastUpdated ? Date.now() - state.lastUpdated.getTime() : Infinity;
+    if (staleMs > REFRESH_MS) fetchRates();
+  });
+</script>
+</body>
+</html>
