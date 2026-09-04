@@ -460,8 +460,13 @@
   }
 
   function onEdit(code, input){
+    const cursorPos = input.selectionStart ?? input.value.length;
+    const digitsBeforeCursor = input.value.slice(0, cursorPos).replace(/[^0-9]/g, '').length;
     const digitsOnly = input.value.replace(/[^0-9]/g, '');
-    if (digitsOnly !== input.value) input.value = digitsOnly;
+    if (digitsOnly !== input.value) {
+      input.value = digitsOnly;
+      input.setSelectionRange(digitsBeforeCursor, digitsBeforeCursor);
+    }
     const raw = parseInt(digitsOnly, 10);
     state.anchorCode = code;
     state.anchorRaw = Number.isFinite(raw) ? raw : 0;
