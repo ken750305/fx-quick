@@ -384,7 +384,7 @@
 
 <script>
   const CURRENCIES = [
-    { code:'TWD', name:'台幣', flag:'🇹🇼', decimals:2, fallback:31.5 },
+    { code:'TWD', name:'台幣', flag:'🇹🇼', decimals:0, fallback:31.5 },
     { code:'JPY', name:'日圓', flag:'🇯🇵', decimals:0, fallback:149  },
     { code:'CNY', name:'人民幣', flag:'🇨🇳', decimals:2, fallback:7.1  },
     { code:'USD', name:'美金', flag:'🇺🇸', decimals:2, fallback:1    },
@@ -617,7 +617,7 @@
     apiKeyInput.value = state.apiKey;
   } catch (e) { /* ignore unavailable storage */ }
   updateBadge();
-  inputs[state.anchorCode].value = formatAmount(state.anchorRaw, 2);
+  inputs[state.anchorCode].value = formatAmount(state.anchorRaw, CURRENCIES.find(c => c.code === state.anchorCode).decimals);
   recompute();
   fetchRates();
   refreshBtn.addEventListener('click', fetchRates);
