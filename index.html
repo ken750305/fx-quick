@@ -391,6 +391,7 @@
   ];
   const KEY_STORAGE = 'fx-quick-td-key';
   const CACHE_KEY = 'fx-quick-rates-v1';
+  const ANCHOR_KEY = 'fx-quick-anchor-v1';
   const REFRESH_MS = 10 * 60 * 1000;
 
   const SOURCE_LABEL = {
@@ -452,6 +453,12 @@
     });
   }
 
+  function saveAnchor(){
+    try {
+      localStorage.setItem(ANCHOR_KEY, JSON.stringify({ code: state.anchorCode, raw: state.anchorRaw }));
+    } catch (e) { /* ignore unavailable storage */ }
+  }
+
   function onEdit(code, input){
     const digitsOnly = input.value.replace(/[^0-9]/g, '');
     if (digitsOnly !== input.value) input.value = digitsOnly;
@@ -459,6 +466,7 @@
     state.anchorCode = code;
     state.anchorRaw = Number.isFinite(raw) ? raw : 0;
     recompute();
+    saveAnchor();
   }
 
   function recompute(){
@@ -609,11 +617,19 @@
   function resetAmounts(){
     state.anchorRaw = 0;
     recompute();
+    saveAnchor();
   }
   clearBtn.addEventListener('click', resetAmounts);
 
   buildRows();
   readCache();
+  try {
+    const savedAnchor = JSON.parse(localStorage.getItem(ANCHOR_KEY));
+    if (savedAnchor && CURRENCIES.some(c => c.code === savedAnchor.code) && Number.isFinite(savedAnchor.raw)) {
+      state.anchorCode = savedAnchor.code;
+      state.anchorRaw = savedAnchor.raw;
+    }
+  } catch (e) { /* ignore unavailable storage */ }
   try {
     state.apiKey = localStorage.getItem(KEY_STORAGE) || '';
     apiKeyInput.value = state.apiKey;
